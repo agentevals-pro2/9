@@ -50,6 +50,22 @@ class BroadcastListTest(APITestCase):
         assert response.status_code == 200
         assert len(response.data) == 0
 
+    def test_superuser_created_by_email(self):
+        broadcast = Broadcast.objects.create(
+            message="hello",
+            is_active=True,
+            created_by_id=self.user,
+        )
+
+        self.add_user_permission(user=self.user, permission="broadcasts.admin")
+        self.login_as(user=self.user, superuser=True)
+
+        response = self.client.get("/api/0/broadcasts/?show=all")
+        assert response.status_code == 200
+        assert any(b["id"] == str(broadcast.id) for b in response.data)
+        row = next(b for b in response.data if b["id"] == str(broadcast.id))
+        assert row["createdBy"]["email"] == self.user.email
+
     def test_basic_user_with_all(self):
         broadcast1 = Broadcast.objects.create(message="bar", is_active=True)
         Broadcast.objects.create(message="foo", is_active=False, created_by_id=self.user)
